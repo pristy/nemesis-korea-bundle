@@ -1,0 +1,27 @@
+[nemesis]
+version=1.1
+type=list
+
+[package.0]
+path=packages/hmgapi.zip
+name=HMG-API
+short-desc=Mod manager for Gen5W head units: hooks, mods, Car Report.
+published=2026-11-08
+
+[package.1]
+path=packages/korea.projection.zip
+name=Korea Projection: Wireless for Korean Cars
+short-desc=Wireless CarPlay and Android Auto for Korean Hyundai/Kia cars
+published=2026-11-15
+
+[package.2]
+path=packages/hmgapi.nemesis-shortcut.zip
+name=NEMESIS in the app menu
+short-desc=HMG-API mod: NEMESIS in the app menu
+published=2026-11-08
+
+[package.3]
+path=packages/hmgapi.adb.zip
+name=ADB
+short-desc=HMG-API mod: ADB
+published=2026-11-08
