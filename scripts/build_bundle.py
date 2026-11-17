@@ -16,14 +16,14 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 OFFICIAL_URLS = {
     "ota_package.tar": "https://github.com/xwtk/hmg_nemesis/releases/latest/download/ota_package.tar",
     "stable_hmgapi": "https://github.com/Open-HMG/HMG-API/releases/download/v1.0.2/hmgapi-1.0.2-nemesis.zip",
     "stable_kp": "https://github.com/StopDragon/korea-projection/releases/download/v1.7.3/korea-projection-1.7.3-usb.zip",
     "latest_hmgapi": "https://github.com/Open-HMG/HMG-API/releases/download/v1.1.0-beta.1/hmgapi-1.1.0-beta.1-nemesis.zip",
-    "latest_kp": "https://github.com/StopDragon/korea-projection/releases/download/v1.7.4-beta.2/korea-projection-1.7.4-beta.2-usb.zip",
+    "latest_kp": "https://github.com/StopDragon/korea-projection/releases/download/v1.7.4/korea-projection-1.7.4-usb.zip",
 }
 
 
@@ -135,6 +135,8 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
             repo_root / "sources" / "latest" / "hmgapi.zip",
         ]
         kp_candidates = [
+            downloads / "네메시스" / "korea-projection-1.7.4-usb" / "packages" / "korea.projection.zip",
+            downloads / "korea-projection-1.7.4-usb" / "packages" / "korea.projection.zip",
             downloads / "네메시스" / "korea-projection-1.7.4-beta.2-usb" / "packages" / "korea.projection.zip",
             downloads / "korea-projection-1.7.4-beta.2-usb" / "packages" / "korea.projection.zip",
             workspace_root / "korea-projection" / "nemesis-pkg" / "korea.projection.zip",
@@ -151,8 +153,8 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
             workspace_root / "HMG-API" / "out" / "packages" / "hmgapi.adb.zip",
         ]
         hmgapi_desc = "HMG-API v1.1.0-beta.1 (Latest)"
-        kp_desc = "Korea Projection v1.7.4-beta.2 (Latest)"
-        kp_ver = "1.7.4-beta.2"
+        kp_desc = "Korea Projection v1.7.4 (Latest)"
+        kp_ver = "1.7.4"
         hmg_ver = "1.1.0-beta.1"
 
     # 만약 korea.projection.zip이 없고 소스 폴더가 있으면 즉석 패키징
@@ -223,6 +225,7 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
     staging_packages.mkdir(parents=True, exist_ok=True)
 
     # NEMESIS.data 생성 (채널 맞춤형)
+    kp_published = "2026-11-16" if channel == "latest" else "2026-11-15"
     nemesis_data_content = f"""[nemesis]
 version=1.1
 type=list
@@ -237,7 +240,7 @@ published=2026-11-08
 path=packages/korea.projection.zip
 name={kp_desc}
 short-desc=Wireless CarPlay and Android Auto for Korean Hyundai/Kia cars
-published=2026-11-15
+published={kp_published}
 """
     if shortcut_zip:
         nemesis_data_content += """

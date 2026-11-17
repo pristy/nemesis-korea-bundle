@@ -15,9 +15,9 @@
 ### 1. 준비물
 1. **32GB 이하 USB 메모리 1개** (FAT32 형식 포맷)
 2. **배포 파일 (용도에 맞게 택1)**
-   * **Stable (안정 버전, 권장):** `nemesis-korea-bundle-v1.0.0-stable-usb.zip`  
+   * **Stable (안정 버전, 권장):** `nemesis-korea-bundle-v1.0.1-stable-usb.zip`  
      *(검증된 정식 버전 조합: HMG-API 1.0.2 + Korea Projection 1.7.3)*
-   * **Latest (최신 버전):** `nemesis-korea-bundle-v1.0.0-latest-usb.zip`  
+   * **Latest (최신 버전):** `nemesis-korea-bundle-v1.0.1-latest-usb.zip`  
      *(최신 기능 및 개선 사항 우선 적용: HMG-API 1.1.0-beta.1 + Korea Projection 1.7.4)*
 
 ---
@@ -25,7 +25,7 @@
 ### 2. [PC] USB 메모리에 파일 복사
 
 1. USB를 컴퓨터에 연결한 후 **마우스 우클릭 -> [포맷] -> 파일 시스템을 [FAT32]**로 선택하고 [시작]을 누릅니다.
-2. 다운로드받은 `nemesis-korea-bundle-v1.0.0-*-usb.zip` 파일(Stable 또는 Latest)의 **압축을 해제**합니다.
+2. 다운로드받은 `nemesis-korea-bundle-v1.0.1-*-usb.zip` 파일(Stable 또는 Latest)의 **압축을 해제**합니다.
 3. 압축 해제된 폴더 안의 내용물을 **USB 메모리의 최상위(루트)에 그대로 복사**합니다.
 
 > [!IMPORTANT]

@@ -29,7 +29,7 @@ Copyright (c) 2026 pristy
 * **저장소 (Repository)**: [https://github.com/StopDragon/korea-projection](https://github.com/StopDragon/korea-projection)
 * **라이선스 (License)**: GNU Affero General Public License v3.0 (AGPL-3.0)
 * **포함/사용 구성요소**:
-  * `korea.projection.zip` (`korea-projection-1.7.3-usb.zip`, `korea-projection-1.7.4-beta.2-usb.zip`): 한국 현대·기아 순정 내비게이션 전용 Wi-Fi 핫스팟 제어 서비스, 무선 카플레이/안드로이드 오토 연결 패치 및 상태 관리 애플리케이션
+  * `korea.projection.zip` (`korea-projection-1.7.3-usb.zip`, `korea-projection-1.7.4-usb.zip`): 한국 현대·기아 순정 내비게이션 전용 Wi-Fi 핫스팟 제어 서비스, 무선 카플레이/안드로이드 오토 연결 패치 및 상태 관리 애플리케이션
 
 ---
 
