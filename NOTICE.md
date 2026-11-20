@@ -31,6 +31,13 @@ Copyright (c) 2026 pristy
 * **포함/사용 구성요소**:
   * `korea.projection.zip` (`korea-projection-1.7.3-usb.zip`, `korea-projection-1.7.4-usb.zip`): 한국 현대·기아 순정 내비게이션 전용 Wi-Fi 핫스팟 제어 서비스, 무선 카플레이/안드로이드 오토 연결 패치 및 상태 관리 애플리케이션
 
+### HKMC Factory 82
+* **저작권 (Copyright)**: Copyright (c) 2026 Armando Dollia
+* **저장소 (Repository)**: [https://github.com/armandodollia/nemesis-package-builds](https://github.com/armandodollia/nemesis-package-builds)
+* **라이선스 (License)**: MIT License
+* **포함/사용 구성요소**:
+  * `hkmc.factory82.zip` (`hkmc.factory82.bootready-v4.2.1.nemesis.zip`): 시동 시 인포테인먼트 안전 경고(주의/확인) 화면을 자동 감지하여 넘겨주는 백그라운드 모니터 서비스 (`svc/watch.sh`)
+
 ---
 
 ## 2. 라이선스 및 소스코드 공개 고지 (License & Source Availability)

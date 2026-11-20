@@ -1,10 +1,22 @@
 # Nemesis Korea Bundle (네메시스 코리아 번들)
 
-> **한국 현대·기아 Gen5W 순정 내비게이션을 위한 올인원(All-in-One) 무선 카플레이 & 안드로이드 오토 USB 설치 팩**  
-> *One USB stick for everything: Wireless CarPlay & Android Auto on Korean Hyundai/Kia Gen5W systems.*
+> **한국 현대·기아 Gen5W 순정 내비게이션을 위한 올인원(All-in-One) 무선 카플레이 & 안드로이드 오토 & 편의 패키지 USB 설치 팩**  
+> *One USB stick for everything: Wireless CarPlay & Android Auto + Auto-Dismiss on Korean Hyundai/Kia Gen5W systems.*
 
+[![Release](https://img.shields.io/github/v/release/pristy/nemesis-korea-bundle?label=Release&color=brightgreen)](https://github.com/pristy/nemesis-korea-bundle/releases/latest)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Target: Gen5W KOR](https://img.shields.io/badge/Target-Gen5W_S5W__M_KOR-green.svg)](#지원-차량-목록-43종-이상-검증-완료)
+
+---
+
+## 🎁 포함된 올인원 기능
+
+* **무선 카플레이 & 무선 안드로이드 오토 (`Korea Projection`):**  
+  차량 탑승 시 스마트폰 케이블 연결 없이 티맵, 카카오내비, 네이버지도가 내비 화면에 자동 실행되며 계기판 길안내를 지원합니다.
+* **시동 안전 경고/확인창 자동 넘김 (`HKMC Factory 82`):**  
+  매 시동마다 화면에 뜨는 *"운전 중 조작은 위험합니다..."* 안전 경고 확인 팝업을 직접 터치할 필요 없이 자동으로 스킵합니다.
+* **시스템 관리 코어 (`HMG-API` + `NEMESIS`):**  
+  안정적인 백그라운드 서비스 구동 및 필요 시 출고 상태로의 100% 원상복구(Wipe)를 보장합니다.
 
 ---
 
@@ -14,10 +26,10 @@
 
 ### 1. 준비물
 1. **32GB 이하 USB 메모리 1개** (FAT32 형식 포맷)
-2. **배포 파일 (용도에 맞게 택1)**
-   * **Stable (안정 버전, 권장):** `nemesis-korea-bundle-v1.0.2-stable-usb.zip`  
+2. **배포 파일 ([GitHub Releases 최신 릴리스](https://github.com/pristy/nemesis-korea-bundle/releases/latest)에서 용도에 맞게 택1)**
+   * **Stable (안정 버전, 권장):** [`nemesis-korea-bundle-v1.0.2-stable-usb.zip`](https://github.com/pristy/nemesis-korea-bundle/releases/download/v1.0.2/nemesis-korea-bundle-v1.0.2-stable-usb.zip)  
      *(검증된 정식 버전 조합: HMG-API 1.0.2 + Korea Projection 1.7.3 + Factory 82 4.2.1)*
-   * **Latest (최신 버전):** `nemesis-korea-bundle-v1.0.2-latest-usb.zip`  
+   * **Latest (최신 버전):** [`nemesis-korea-bundle-v1.0.2-latest-usb.zip`](https://github.com/pristy/nemesis-korea-bundle/releases/download/v1.0.2/nemesis-korea-bundle-v1.0.2-latest-usb.zip)  
      *(최신 기능 및 개선 사항 우선 적용: HMG-API 1.1.0-beta.1 + Korea Projection 1.7.4 + Factory 82 4.2.1)*
 
 ---
@@ -157,6 +169,7 @@ python scripts/build_bundle.py --channel latest
 * **[NEMESIS](https://github.com/xwtk/hmg_nemesis)**: Copyright (c) 2024-2026 Gor Mirzoyan (`xwtk`) (GNU AGPL-3.0)
 * **[HMG-API](https://github.com/Open-HMG/HMG-API)**: Copyright (c) Bryan Lieberman (`VysseCodes`), Open-HMG contributors (GNU AGPL-3.0)
 * **[Korea Projection](https://github.com/StopDragon/korea-projection)**: Copyright (c) StopDragon (GNU AGPL-3.0)
+* **[HKMC Factory 82](https://github.com/armandodollia/nemesis-package-builds)**: Copyright (c) 2026 Armando Dollia (MIT License)
 * **Nemesis Korea Bundle**: Copyright (c) 2026 pristy (GNU AGPL-3.0)
 
 상세 라이선스 전문은 [LICENSE](LICENSE)를, 하위 컴포넌트 저작권 고지는 [NOTICE.md](NOTICE.md)를 참조하세요.
