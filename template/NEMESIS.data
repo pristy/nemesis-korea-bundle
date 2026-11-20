@@ -15,12 +15,18 @@ short-desc=Wireless CarPlay and Android Auto for Korean Hyundai/Kia cars
 published=2026-11-15
 
 [package.2]
+path=packages/hkmc.factory82.zip
+name=HKMC Factory 82 (Startup Warning Auto-Dismiss)
+short-desc=Automatically dismisses the infotainment startup confirmation screen
+published=2026-11-02
+
+[package.3]
 path=packages/hmgapi.nemesis-shortcut.zip
 name=NEMESIS in the app menu
 short-desc=HMG-API mod: NEMESIS in the app menu
 published=2026-11-08
 
-[package.3]
+[package.4]
 path=packages/hmgapi.adb.zip
 name=ADB
 short-desc=HMG-API mod: ADB

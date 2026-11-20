@@ -16,7 +16,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 
 OFFICIAL_URLS = {
     "ota_package.tar": "https://github.com/xwtk/hmg_nemesis/releases/latest/download/ota_package.tar",
@@ -24,6 +24,7 @@ OFFICIAL_URLS = {
     "stable_kp": "https://github.com/StopDragon/korea-projection/releases/download/v1.7.3/korea-projection-1.7.3-usb.zip",
     "latest_hmgapi": "https://github.com/Open-HMG/HMG-API/releases/download/v1.1.0-beta.1/hmgapi-1.1.0-beta.1-nemesis.zip",
     "latest_kp": "https://github.com/StopDragon/korea-projection/releases/download/v1.7.4/korea-projection-1.7.4-usb.zip",
+    "factory82": "https://github.com/armandodollia/nemesis-package-builds/releases/download/v4.2.1/hkmc.factory82.bootready-v4.2.1.nemesis.zip",
 }
 
 
@@ -171,6 +172,18 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
     shortcut_zip = find_file("hmgapi.nemesis-shortcut.zip", shortcut_candidates)
     adb_zip = find_file("hmgapi.adb.zip", adb_candidates)
 
+    factory82_candidates = [
+        repo_root / "sources" / "cache" / "hkmc.factory82.zip",
+        repo_root / "sources" / "hkmc.factory82.zip",
+        downloads / "hkmc.factory82.bootready-v4.2.1.nemesis.zip",
+        downloads / "hkmc.factory82.zip",
+    ]
+    factory82_zip = find_file("hkmc.factory82.zip", factory82_candidates)
+    if not factory82_zip:
+        factory82_bootready = find_file("hkmc.factory82.bootready-v4.2.1.nemesis.zip", factory82_candidates)
+        if factory82_bootready:
+            factory82_zip = factory82_bootready
+
     # 3. 로컬에서 누락된 필수 파일이 있을 경우 GitHub 공식 릴리스에서 자동 다운로드 (범용 지원)
     cache_dir = repo_root / "sources" / "cache"
     if not ota_tar:
@@ -206,10 +219,18 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
                 extract_zip_if_needed(cached_zip, cached_extract)
         kp_zip = find_file("korea.projection.zip", [cached_extract / "packages" / "korea.projection.zip"])
 
+    if not factory82_zip:
+        cached_f82 = cache_dir / "hkmc.factory82.zip"
+        if not cached_f82.is_file():
+            download_file(OFFICIAL_URLS["factory82"], cached_f82)
+        if cached_f82.is_file():
+            factory82_zip = cached_f82
+
     print(f"[+] Component Resolution for [{channel}]:")
     print(f"  - ota_package.tar:     {ota_tar or 'NOT FOUND'}")
     print(f"  - hmgapi.zip:          {hmgapi_zip or 'NOT FOUND'} ({hmg_ver})")
     print(f"  - korea.projection.zip:{kp_zip or 'NOT FOUND'} ({kp_ver})")
+    print(f"  - hkmc.factory82.zip:  {factory82_zip or 'Optional (Skip)'} (v4.2.1)")
     print(f"  - nemesis-shortcut.zip:{shortcut_zip or 'Optional (Skip)'}")
     print(f"  - hmgapi.adb.zip:      {adb_zip or 'Optional (Skip)'}")
 
@@ -224,43 +245,74 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
     staging_packages = staging_dir / "packages"
     staging_packages.mkdir(parents=True, exist_ok=True)
 
-    # NEMESIS.data 생성 (채널 맞춤형)
+    # 번들링할 패키지 목록 구성
     kp_published = "2026-11-16" if channel == "latest" else "2026-11-15"
-    nemesis_data_content = f"""[nemesis]
-version=1.1
-type=list
+    packages_to_bundle = [
+        {
+            "path": "packages/hmgapi.zip",
+            "name": hmgapi_desc,
+            "short-desc": "Mod manager for Gen5W head units: hooks, mods, Car Report.",
+            "published": "2026-11-08",
+            "src": hmgapi_zip,
+            "dst": "hmgapi.zip",
+        },
+        {
+            "path": "packages/korea.projection.zip",
+            "name": kp_desc,
+            "short-desc": "Wireless CarPlay and Android Auto for Korean Hyundai/Kia cars",
+            "published": kp_published,
+            "src": kp_zip,
+            "dst": "korea.projection.zip",
+        },
+    ]
 
-[package.0]
-path=packages/hmgapi.zip
-name={hmgapi_desc}
-short-desc=Mod manager for Gen5W head units: hooks, mods, Car Report.
-published=2026-11-08
+    if factory82_zip:
+        packages_to_bundle.append({
+            "path": "packages/hkmc.factory82.zip",
+            "name": "HKMC Factory 82 (Startup Warning Auto-Dismiss v4.2.1)",
+            "short-desc": "Automatically dismisses the infotainment startup confirmation screen",
+            "published": "2026-11-02",
+            "src": factory82_zip,
+            "dst": "hkmc.factory82.zip",
+        })
 
-[package.1]
-path=packages/korea.projection.zip
-name={kp_desc}
-short-desc=Wireless CarPlay and Android Auto for Korean Hyundai/Kia cars
-published={kp_published}
-"""
     if shortcut_zip:
-        nemesis_data_content += """
-[package.2]
-path=packages/hmgapi.nemesis-shortcut.zip
-name=NEMESIS in the app menu
-short-desc=HMG-API mod: NEMESIS in the app menu
-published=2026-11-08
-"""
-    if adb_zip:
-        idx = 3 if shortcut_zip else 2
-        nemesis_data_content += f"""
-[package.{idx}]
-path=packages/hmgapi.adb.zip
-name=ADB
-short-desc=HMG-API mod: ADB
-published=2026-11-08
-"""
+        packages_to_bundle.append({
+            "path": "packages/hmgapi.nemesis-shortcut.zip",
+            "name": "NEMESIS in the app menu",
+            "short-desc": "HMG-API mod: NEMESIS in the app menu",
+            "published": "2026-11-08",
+            "src": shortcut_zip,
+            "dst": "hmgapi.nemesis-shortcut.zip",
+        })
 
-    (staging_dir / "NEMESIS.data").write_text(nemesis_data_content, encoding="utf-8")
+    if adb_zip:
+        packages_to_bundle.append({
+            "path": "packages/hmgapi.adb.zip",
+            "name": "ADB",
+            "short-desc": "HMG-API mod: ADB",
+            "published": "2026-11-08",
+            "src": adb_zip,
+            "dst": "hmgapi.adb.zip",
+        })
+
+    # NEMESIS.data 생성 (채널 맞춤형)
+    nemesis_lines = [
+        "[nemesis]",
+        "version=1.1",
+        "type=list",
+        "",
+    ]
+    for idx, pinfo in enumerate(packages_to_bundle):
+        nemesis_lines.extend([
+            f"[package.{idx}]",
+            f"path={pinfo['path']}",
+            f"name={pinfo['name']}",
+            f"short-desc={pinfo['short-desc']}",
+            f"published={pinfo['published']}",
+            "",
+        ])
+    (staging_dir / "NEMESIS.data").write_text("\n".join(nemesis_lines), encoding="utf-8")
 
     # README.txt 복사
     readme_template = repo_root / "template" / "README.txt"
@@ -269,12 +321,8 @@ published=2026-11-08
 
     # 파일 복사
     shutil.copy2(ota_tar, staging_dir / "ota_package.tar")
-    shutil.copy2(hmgapi_zip, staging_packages / "hmgapi.zip")
-    shutil.copy2(kp_zip, staging_packages / "korea.projection.zip")
-    if shortcut_zip:
-        shutil.copy2(shortcut_zip, staging_packages / "hmgapi.nemesis-shortcut.zip")
-    if adb_zip:
-        shutil.copy2(adb_zip, staging_packages / "hmgapi.adb.zip")
+    for pinfo in packages_to_bundle:
+        shutil.copy2(pinfo["src"], staging_packages / pinfo["dst"])
 
     # 최종 ZIP 생성
     out_zip = output_dir / f"nemesis-korea-bundle-v{version}-{channel}-usb.zip"

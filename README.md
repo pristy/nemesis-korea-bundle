@@ -15,17 +15,17 @@
 ### 1. 준비물
 1. **32GB 이하 USB 메모리 1개** (FAT32 형식 포맷)
 2. **배포 파일 (용도에 맞게 택1)**
-   * **Stable (안정 버전, 권장):** `nemesis-korea-bundle-v1.0.1-stable-usb.zip`  
-     *(검증된 정식 버전 조합: HMG-API 1.0.2 + Korea Projection 1.7.3)*
-   * **Latest (최신 버전):** `nemesis-korea-bundle-v1.0.1-latest-usb.zip`  
-     *(최신 기능 및 개선 사항 우선 적용: HMG-API 1.1.0-beta.1 + Korea Projection 1.7.4)*
+   * **Stable (안정 버전, 권장):** `nemesis-korea-bundle-v1.0.2-stable-usb.zip`  
+     *(검증된 정식 버전 조합: HMG-API 1.0.2 + Korea Projection 1.7.3 + Factory 82 4.2.1)*
+   * **Latest (최신 버전):** `nemesis-korea-bundle-v1.0.2-latest-usb.zip`  
+     *(최신 기능 및 개선 사항 우선 적용: HMG-API 1.1.0-beta.1 + Korea Projection 1.7.4 + Factory 82 4.2.1)*
 
 ---
 
 ### 2. [PC] USB 메모리에 파일 복사
 
 1. USB를 컴퓨터에 연결한 후 **마우스 우클릭 -> [포맷] -> 파일 시스템을 [FAT32]**로 선택하고 [시작]을 누릅니다.
-2. 다운로드받은 `nemesis-korea-bundle-v1.0.1-*-usb.zip` 파일(Stable 또는 Latest)의 **압축을 해제**합니다.
+2. 다운로드받은 `nemesis-korea-bundle-v1.0.2-*-usb.zip` 파일(Stable 또는 Latest)의 **압축을 해제**합니다.
 3. 압축 해제된 폴더 안의 내용물을 **USB 메모리의 최상위(루트)에 그대로 복사**합니다.
 
 > [!IMPORTANT]
@@ -38,7 +38,8 @@
 >  ├── README.txt
 >  └── packages/          <-- 폴더 그대로 복사
 >       ├── hmgapi.zip
->       └── korea.projection.zip
+>       ├── korea.projection.zip
+>       └── hkmc.factory82.zip
 > ```
 
 ---
@@ -60,9 +61,11 @@
 
 #### [2단계] 패키지 화면 설치
 1. 내비게이션이 다시 켜지면 잠시 후 화면에 **패키지 설치 목록 창(Package Store)**이 자동으로 열립니다.
-2. 목록에서 **`HMG-API`** 항목의 **[Install]**을 먼저 터치하여 설치합니다.
-3. 설치 완료 후 그 아래 **`Korea Projection`** 항목의 **[Install]**을 터치하여 설치합니다.
-4. 화면에 **"설정을 마쳤습니다"** 알림이 나타날 때까지 약 1~2분간 대기합니다.
+2. 목록에서 **`HMG-API`** 항목의 **[Install]**을 먼저 터치하여 설치합니다. (필수)
+3. 설치 완료 후 그 아래 **`Korea Projection`** 항목의 **[Install]**을 터치하여 설치합니다. (필수: 무선 카플레이/AA)
+4. (선택/권장) **`HKMC Factory 82`** 항목의 **[Install]**을 터치하여 설치합니다.  
+   *(매번 시동 시 나타나는 '주의/동의' 안전 경고 확인 화면을 자동으로 넘겨줍니다).*
+5. 화면에 **"설정을 마쳤습니다"** 알림이 나타날 때까지 약 1~2분간 대기합니다.
 
 #### [3단계] USB 분리 및 완전 재부팅 (필수 단계)
 1. **USB 메모리를 차량에서 분리합니다.**
