@@ -31,3 +31,9 @@ path=packages/hmgapi.adb.zip
 name=ADB
 short-desc=HMG-API mod: ADB
 published=2026-11-08
+
+[package.5]
+path=packages/hkmc.bluelink-dismiss.zip
+name=Bluelink Nag Auto-Dismiss
+short-desc=Permanently suppresses the unactivated 30-day Bluelink nag popup
+published=2026-11-21

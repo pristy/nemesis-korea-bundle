@@ -22,7 +22,7 @@ OFFICIAL_URLS = {
     "ota_package.tar": "https://github.com/xwtk/hmg_nemesis/releases/latest/download/ota_package.tar",
     "stable_hmgapi": "https://github.com/Open-HMG/HMG-API/releases/download/v1.0.2/hmgapi-1.0.2-nemesis.zip",
     "stable_kp": "https://github.com/StopDragon/korea-projection/releases/download/v1.7.3/korea-projection-1.7.3-usb.zip",
-    "latest_hmgapi": "https://github.com/Open-HMG/HMG-API/releases/download/v1.1.0-beta.1/hmgapi-1.1.0-beta.1-nemesis.zip",
+    "latest_hmgapi": "https://github.com/Open-HMG/HMG-API/releases/download/v1.1.0-rc.8/hmgapi-1.1.0-rc.8-usb.zip",
     "latest_kp": "https://github.com/StopDragon/korea-projection/releases/download/v1.7.4/korea-projection-1.7.4-usb.zip",
     "factory82": "https://github.com/armandodollia/nemesis-package-builds/releases/download/v4.2.1/hkmc.factory82.bootready-v4.2.1.nemesis.zip",
 }
@@ -197,16 +197,22 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
         url_key = f"{channel}_hmgapi"
         cached_zip = cache_dir / f"{channel}_hmgapi.zip"
         cached_extract = cache_dir / f"{channel}_hmgapi"
-        if not (cached_extract / "packages" / "hmgapi.zip").is_file():
+        if not (cached_extract / "packages" / "hmgapi.zip").is_file() and not (cached_extract / "HMGAPI" / "install" / "hmgapi.zip").is_file():
             if not cached_zip.is_file():
                 download_file(OFFICIAL_URLS[url_key], cached_zip)
             if cached_zip.is_file():
                 extract_zip_if_needed(cached_zip, cached_extract)
-        hmgapi_zip = find_file("hmgapi.zip", [cached_extract / "packages" / "hmgapi.zip"])
+        hmgapi_zip = find_file("hmgapi.zip", [cached_extract / "packages" / "hmgapi.zip", cached_extract / "HMGAPI" / "install" / "hmgapi.zip", cached_zip])
         if not shortcut_zip:
-            shortcut_zip = find_file("hmgapi.nemesis-shortcut.zip", [cached_extract / "packages" / "hmgapi.nemesis-shortcut.zip"])
+            shortcut_zip = find_file("hmgapi.nemesis-shortcut.zip", [
+                cached_extract / "packages" / "hmgapi.nemesis-shortcut.zip",
+                cached_extract / "HMGAPI" / "updates" / "nemesis-shortcut-1.1.0.zip",
+            ])
         if not adb_zip:
-            adb_zip = find_file("hmgapi.adb.zip", [cached_extract / "packages" / "hmgapi.adb.zip"])
+            adb_zip = find_file("hmgapi.adb.zip", [
+                cached_extract / "packages" / "hmgapi.adb.zip",
+                cached_extract / "HMGAPI" / "updates" / "adb-1.0.1-rc.1.zip",
+            ])
 
     if not kp_zip:
         url_key = f"{channel}_kp"
@@ -296,6 +302,21 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
             "dst": "hmgapi.adb.zip",
         })
 
+    bluelink_pkg_dir = repo_root / "packages" / "local.hkmc.bluelink-dismiss"
+    temp_bluelink_zip = None
+    if bluelink_pkg_dir.is_dir():
+        print(f"[*] Packaging hkmc.bluelink-dismiss.zip from {bluelink_pkg_dir}...")
+        temp_bluelink_zip = output_dir / f"temp_bluelink_dismiss_{channel}.zip"
+        zip_dir(bluelink_pkg_dir, temp_bluelink_zip)
+        packages_to_bundle.append({
+            "path": "packages/hkmc.bluelink-dismiss.zip",
+            "name": "Bluelink Nag Auto-Dismiss (v1.0.0)",
+            "short-desc": "Permanently suppresses the unactivated 30-day Bluelink nag popup",
+            "published": "2026-11-21",
+            "src": temp_bluelink_zip,
+            "dst": "hkmc.bluelink-dismiss.zip",
+        })
+
     # NEMESIS.data 생성 (채널 맞춤형)
     nemesis_lines = [
         "[nemesis]",
@@ -334,6 +355,8 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
     temp_zip = output_dir / f"temp_korea_projection_{channel}.zip"
     if temp_zip.is_file():
         temp_zip.unlink()
+    if temp_bluelink_zip and temp_bluelink_zip.is_file():
+        temp_bluelink_zip.unlink()
 
     size_mb = out_zip.stat().st_size / (1024 * 1024)
     sha256 = calculate_sha256(out_zip)

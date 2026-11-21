@@ -26,3 +26,9 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+
+# Vehicle dump & reverse engineering artifacts
+vehicle_dump/
+decompiled_*/
+smali_*/
+
