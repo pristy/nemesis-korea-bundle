@@ -350,23 +350,6 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
     return out_zip
 
 
-def build_standalone_tools(repo_root: Path, output_dir: Path) -> list[Path]:
-    tools = []
-    # telematics-dumper standalone USB tool
-    td_src = repo_root / "tools" / "telematics-dumper"
-    if td_src.is_dir():
-        td_zip = output_dir / "telematics-dumper-usb.zip"
-        with zipfile.ZipFile(td_zip, "w", zipfile.ZIP_DEFLATED) as z:
-            for f in ["NEMESIS.data", "NEMESIS.sh", "README.txt"]:
-                fp = td_src / f
-                if fp.is_file():
-                    z.write(fp, arcname=f)
-        tools.append(td_zip)
-        print(f"[+] Packaged standalone tool: {td_zip.name} ({td_zip.stat().st_size / 1024:.1f} KB)")
-
-    return tools
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build Nemesis Korea Bundle USB zip packages.")
     parser.add_argument("--version", default=VERSION, help=f"Release version (default: {VERSION})")
@@ -388,19 +371,16 @@ def main() -> int:
         if res:
             bundle_results.append(res)
 
-    tool_results = build_standalone_tools(repo_root, output_dir)
-    all_results = bundle_results + tool_results
-
     print("\n========================================================")
-    print(f"[*] Build Summary: {len(bundle_results)}/{len(targets)} bundles + {len(tool_results)} standalone tools built.")
-    for r in all_results:
+    print(f"[*] Build Summary: {len(bundle_results)}/{len(targets)} bundles built.")
+    for r in bundle_results:
         print(f"  -> {r}")
     print("========================================================")
 
     # Downloads 폴더로 자동 복사
     downloads = Path.home() / "Downloads"
     if downloads.is_dir():
-        for r in all_results:
+        for r in bundle_results:
             dst = downloads / r.name
             shutil.copy2(r, dst)
             print(f"[+] Copied to Downloads: {dst}")
