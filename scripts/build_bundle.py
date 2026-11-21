@@ -16,7 +16,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-VERSION = "1.0.3"
+VERSION = "1.0.2"
 
 OFFICIAL_URLS = {
     "ota_package.tar": "https://github.com/xwtk/hmg_nemesis/releases/latest/download/ota_package.tar",
@@ -302,21 +302,6 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
             "dst": "hmgapi.adb.zip",
         })
 
-    bluelink_pkg_dir = repo_root / "packages" / "local.hkmc.bluelink-dismiss"
-    temp_bluelink_zip = None
-    if bluelink_pkg_dir.is_dir():
-        print(f"[*] Packaging hkmc.bluelink-dismiss.zip from {bluelink_pkg_dir}...")
-        temp_bluelink_zip = output_dir / f"temp_bluelink_dismiss_{channel}.zip"
-        zip_dir(bluelink_pkg_dir, temp_bluelink_zip)
-        packages_to_bundle.append({
-            "path": "packages/hkmc.bluelink-dismiss.zip",
-            "name": "Bluelink Nag Auto-Dismiss (v1.0.0)",
-            "short-desc": "Permanently suppresses the unactivated 30-day Bluelink nag popup",
-            "published": "2026-11-21",
-            "src": temp_bluelink_zip,
-            "dst": "hkmc.bluelink-dismiss.zip",
-        })
-
     # NEMESIS.data 생성 (채널 맞춤형)
     nemesis_lines = [
         "[nemesis]",
@@ -355,8 +340,6 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
     temp_zip = output_dir / f"temp_korea_projection_{channel}.zip"
     if temp_zip.is_file():
         temp_zip.unlink()
-    if temp_bluelink_zip and temp_bluelink_zip.is_file():
-        temp_bluelink_zip.unlink()
 
     size_mb = out_zip.stat().st_size / (1024 * 1024)
     sha256 = calculate_sha256(out_zip)
@@ -369,19 +352,7 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
 
 def build_standalone_tools(repo_root: Path, output_dir: Path) -> list[Path]:
     tools = []
-    # 1. bluelink-dismiss standalone USB installer
-    bd_src = repo_root / "tools" / "bluelink-dismiss"
-    if bd_src.is_dir():
-        bd_zip = output_dir / "bluelink-dismiss-standalone-usb.zip"
-        with zipfile.ZipFile(bd_zip, "w", zipfile.ZIP_DEFLATED) as z:
-            for f in ["NEMESIS.data", "NEMESIS.sh", "README.txt", "README.md"]:
-                fp = bd_src / f
-                if fp.is_file():
-                    z.write(fp, arcname=f)
-        tools.append(bd_zip)
-        print(f"[+] Packaged standalone tool: {bd_zip.name} ({bd_zip.stat().st_size / 1024:.1f} KB)")
-
-    # 2. telematics-dumper standalone USB tool
+    # telematics-dumper standalone USB tool
     td_src = repo_root / "tools" / "telematics-dumper"
     if td_src.is_dir():
         td_zip = output_dir / "telematics-dumper-usb.zip"
