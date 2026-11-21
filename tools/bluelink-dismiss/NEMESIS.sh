@@ -3,19 +3,11 @@
 # HKMC Bluelink / Kia Connect Nag Auto-Dismiss Standalone Installer
 # Target: Hyundai/Kia Gen5W Standard Navigation (Android 4.4.2 KitKat / SDK 19)
 # Execution: Runs as root via NEMESIS USB autorun (cwd = USB root)
-# Hardened for Android 4.4.2 Toolbox & mksh:
-#   1. No external formatters, no Here-Docs (uses pure shell builtin echo block)
-#   2. Size verification [ ! -s "$TMP" ] before any move (zero 0-byte risk)
-#   3. Standard plain move command with return-code verification
-#   4. In-directory temp files (.tmp.$$) inheriting SELinux context & partition
-#   5. Deduplicated /proc + ps process lookup (Zero external tool dependency)
-#   6. Non-telematics unit guard (skips cleanly if package absent)
-#   7. Strict permissions (shard 0666, monthly 0660, chown 1000:1000)
-#   8. Non-stopped respawn (kill -9 only on reload) & Double sync
 # ==============================================================================
 
 export PATH=/system/xbin:/sbin:/vendor/bin:/system/sbin:/system/bin:$PATH
 export LD_LIBRARY_PATH=/vendor/lib:/system/lib
+umask 022
 
 # 0. 비대상 차량 가드 (텔레매틱스 패키지가 없는 기종은 안전하게 스킵)
 if [ ! -d "/data/data/com.hkmc.telematics.service" ]; then
@@ -70,7 +62,7 @@ trap 'exit 130' INT
 # USB 내 불필요한 스왑 파일 정리
 rm -f .NEMESIS.sh.swp 2>/dev/null
 
-# 4.4.2 Toolbox/BusyBox 호환 순수 mksh 프로세스 PID 검색 함수 (중복 출력 방지 및 컬럼 순서 대응)
+# 4.4.2 Toolbox/BusyBox 호환 순수 mksh PID 검색 함수 (중복 및 UID 오인 방지)
 find_pids() {
     _target="$1"
     _found=0
@@ -89,30 +81,22 @@ find_pids() {
     ps 2>/dev/null | while read -r _c1 _c2 _rest; do
         case " $_rest" in
             *" $_target")
-                case "$_c2" in
-                    [0-9]*) echo "$_c2" ;;
-                    *)
-                        case "$_c1" in
-                            [0-9]*) echo "$_c1" ;;
+                case "$_c1" in
+                    ""|*[!0-9]*)
+                        case "$_c2" in
+                            ""|*[!0-9]*) ;;
+                            *) echo "$_c2" ;;
                         esac
                         ;;
+                    *) echo "$_c1" ;;
                 esac
                 ;;
         esac
     done
 }
 
-# 작성 전: SharedPreferences RAM 캐시 완전 드롭을 위해 kill -9 수행 (FLAG_STOPPED 부작용 방지)
-stop_telematics_processes() {
-    for _p in com.hkmc.telematics.service com.hkmc.telematics.apps.Vrm.main; do
-        for _pid in $(find_pids "$_p"); do
-            [ -n "$_pid" ] && kill -9 "$_pid" 2>/dev/null
-        done
-    done
-}
-
-# 작성 후: FLAG_STOPPED 방지 및 ActivityManager 자동 리스폰 유도를 위해 kill -9만 수행
-restart_telematics_processes() {
+# FLAG_STOPPED 부작용 없이 RAM 캐시 드롭 및 자동 리스폰 유도
+kill_telematics_processes() {
     for _p in com.hkmc.telematics.service com.hkmc.telematics.apps.Vrm.main; do
         for _pid in $(find_pids "$_p"); do
             [ -n "$_pid" ] && kill -9 "$_pid" 2>/dev/null
@@ -147,24 +131,24 @@ if [ ! -d "$PREF_DIR" ]; then
     chmod 771 "$PREF_DIR" 2>/dev/null
 fi
 
-# 2. 원본 파일 안전 백업 (USB 및 단말 내부 동시 보존)
-if [ -f "$SHARD_XML" ]; then
+# 2. 원본 파일 안전 백업 (0바이트 제외, USB 및 단말 내부 동시 보존)
+if [ -s "$SHARD_XML" ]; then
     cat "$SHARD_XML" > "$USB_BACKUP_DIR/shard_service_activation_start_setting_${TIMESTAMP}.xml" 2>/dev/null
-    if [ ! -f "$DEV_BACKUP_DIR/shard_service_activation_start_setting.xml" ]; then
+    if [ ! -s "$DEV_BACKUP_DIR/shard_service_activation_start_setting.xml" ]; then
         cat "$SHARD_XML" > "$DEV_BACKUP_DIR/shard_service_activation_start_setting.xml" 2>/dev/null
     fi
     echo "[+] Backed up original shard_service_activation_start_setting.xml"
 fi
 
-if [ -f "$MONTHLY_XML" ]; then
+if [ -s "$MONTHLY_XML" ]; then
     cat "$MONTHLY_XML" > "$USB_BACKUP_DIR/MonthlyPopupDetails_${TIMESTAMP}.xml" 2>/dev/null
-    if [ ! -f "$DEV_BACKUP_DIR/MonthlyPopupDetails.xml" ]; then
+    if [ ! -s "$DEV_BACKUP_DIR/MonthlyPopupDetails.xml" ]; then
         cat "$MONTHLY_XML" > "$DEV_BACKUP_DIR/MonthlyPopupDetails.xml" 2>/dev/null
     fi
     echo "[+] Backed up original MonthlyPopupDetails.xml"
 fi
 
-# 3. [순수 echo 블록 작성] 외부 바이너리나 Here-Doc 의존 없이 순수 쉘 내장 echo 사용
+# 3. 순수 쉘 내장 echo 블록으로 임시 XML 작성
 {
     echo "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>"
     echo "<map>"
@@ -182,25 +166,25 @@ fi
     echo "</map>"
 } > "$TMP_MONTHLY"
 
-# 4. [0바이트 파괴 방어 검증] 파일이 비어있으면 즉시 중단하여 원본 보존
+# 4. 0바이트 파괴 방어 검증
 if [ ! -s "$TMP_SHARD" ] || [ ! -s "$TMP_MONTHLY" ]; then
     echo "[!] Error: Generated temp XML is empty! Aborting to protect original files."
     rm -f "$TMP_SHARD" "$TMP_MONTHLY" 2>/dev/null
     exit 1
 fi
 
-# 5. [동일 디렉터리 권한 선적용] 원본 소유권(system:system 1000:1000) 및 권한(0666/0660) 설정
+# 5. 동일 디렉터리 내 임시 파일 권한 선적용 (system:system 1000:1000, 0666/0660)
 chown 1000:1000 "$TMP_SHARD" 2>/dev/null || chown system:system "$TMP_SHARD" 2>/dev/null
 chmod 666 "$TMP_SHARD" 2>/dev/null
 
 chown 1000:1000 "$TMP_MONTHLY" 2>/dev/null || chown system:system "$TMP_MONTHLY" 2>/dev/null
 chmod 660 "$TMP_MONTHLY" 2>/dev/null
 
-# 6. [듀얼 프로세스 종료] SharedPreferences RAM 캐시 동기화 충돌 방어
+# 6. 듀얼 프로세스 종료 (SharedPreferences RAM 캐시 동기화 충돌 방어)
 echo "[*] Stopping HKMC_TAppService and HKMC_TAppVRM..."
-stop_telematics_processes
+kill_telematics_processes
 
-# 7. [Toolbox 호환 원자적 교체 및 반환값 검증]
+# 7. Toolbox 호환 원자적 교체, .bak 잔여물 제거 및 반환값 검증
 if ! mv "$TMP_SHARD" "$SHARD_XML" 2>/dev/null; then
     echo "[!] Error: Failed to replace shard_service_activation_start_setting.xml"
     rm -f "$TMP_SHARD" "$TMP_MONTHLY" 2>/dev/null
@@ -213,7 +197,8 @@ if ! mv "$TMP_MONTHLY" "$MONTHLY_XML" 2>/dev/null; then
     exit 1
 fi
 
-# 최종 소유권/권한 및 SELinux 컨텍스트 재확인
+rm -f "${SHARD_XML}.bak" "${MONTHLY_XML}.bak" 2>/dev/null || true
+
 chown 1000:1000 "$SHARD_XML" 2>/dev/null || chown system:system "$SHARD_XML" 2>/dev/null
 chmod 666 "$SHARD_XML" 2>/dev/null
 
@@ -223,11 +208,10 @@ chmod 660 "$MONTHLY_XML" 2>/dev/null
 restorecon "$SHARD_XML" 2>/dev/null || true
 restorecon "$MONTHLY_XML" 2>/dev/null || true
 
-# 8. 프로세스 자동 리스폰 유도 (am force-stop 없이 kill -9만 수행하여 새 XML 로드 유도)
-restart_telematics_processes
+# 8. 교체 중 자동 기동된 프로세스 정리 (새 XML 로드 유도)
+kill_telematics_processes
 
-# 9. [하드 리셋 유실 방지] 디스크 버퍼 강제 플러시 2회
-sync
+# 9. 디스크 버퍼 플러시
 sync
 
 # 10. 검증 보고서 작성 (USB 루트에 DISARM_SUCCESS.txt 기록)
