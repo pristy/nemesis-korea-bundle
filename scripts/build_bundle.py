@@ -16,7 +16,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 
 OFFICIAL_URLS = {
     "ota_package.tar": "https://github.com/xwtk/hmg_nemesis/releases/latest/download/ota_package.tar",
@@ -367,6 +367,35 @@ def build_channel(channel: str, version: str, repo_root: Path, output_dir: Path)
     return out_zip
 
 
+def build_standalone_tools(repo_root: Path, output_dir: Path) -> list[Path]:
+    tools = []
+    # 1. bluelink-dismiss standalone USB installer
+    bd_src = repo_root / "tools" / "bluelink-dismiss"
+    if bd_src.is_dir():
+        bd_zip = output_dir / "bluelink-dismiss-standalone-usb.zip"
+        with zipfile.ZipFile(bd_zip, "w", zipfile.ZIP_DEFLATED) as z:
+            for f in ["NEMESIS.data", "NEMESIS.sh", "README.txt", "README.md"]:
+                fp = bd_src / f
+                if fp.is_file():
+                    z.write(fp, arcname=f)
+        tools.append(bd_zip)
+        print(f"[+] Packaged standalone tool: {bd_zip.name} ({bd_zip.stat().st_size / 1024:.1f} KB)")
+
+    # 2. telematics-dumper standalone USB tool
+    td_src = repo_root / "tools" / "telematics-dumper"
+    if td_src.is_dir():
+        td_zip = output_dir / "telematics-dumper-usb.zip"
+        with zipfile.ZipFile(td_zip, "w", zipfile.ZIP_DEFLATED) as z:
+            for f in ["NEMESIS.data", "NEMESIS.sh", "README.txt"]:
+                fp = td_src / f
+                if fp.is_file():
+                    z.write(fp, arcname=f)
+        tools.append(td_zip)
+        print(f"[+] Packaged standalone tool: {td_zip.name} ({td_zip.stat().st_size / 1024:.1f} KB)")
+
+    return tools
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build Nemesis Korea Bundle USB zip packages.")
     parser.add_argument("--version", default=VERSION, help=f"Release version (default: {VERSION})")
@@ -382,27 +411,30 @@ def main() -> int:
     print(f"[*] Repository root: {repo_root}")
 
     targets = ["stable", "latest"] if args.channel == "all" else [args.channel]
-    results = []
+    bundle_results = []
     for ch in targets:
         res = build_channel(ch, args.version, repo_root, output_dir)
         if res:
-            results.append(res)
+            bundle_results.append(res)
+
+    tool_results = build_standalone_tools(repo_root, output_dir)
+    all_results = bundle_results + tool_results
 
     print("\n========================================================")
-    print(f"[*] Build Summary: {len(results)}/{len(targets)} bundles built.")
-    for r in results:
+    print(f"[*] Build Summary: {len(bundle_results)}/{len(targets)} bundles + {len(tool_results)} standalone tools built.")
+    for r in all_results:
         print(f"  -> {r}")
     print("========================================================")
 
     # Downloads 폴더로 자동 복사
     downloads = Path.home() / "Downloads"
     if downloads.is_dir():
-        for r in results:
+        for r in all_results:
             dst = downloads / r.name
             shutil.copy2(r, dst)
             print(f"[+] Copied to Downloads: {dst}")
 
-    return 0 if len(results) == len(targets) else 1
+    return 0 if len(bundle_results) == len(targets) else 1
 
 
 if __name__ == "__main__":
