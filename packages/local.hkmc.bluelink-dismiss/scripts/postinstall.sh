@@ -6,13 +6,13 @@
 # Zero daemon, zero background CPU/battery overhead, safe 32-bit timestamp
 # Hardened for Android 4.4.2 Toolbox & mksh:
 #   1. Non-telematics unit guard (skips cleanly if package absent)
-#   2. Trap cleanup for temporary files
-#   3. Pure /proc + ps process lookup (Zero external tool dependency)
-#   4. No printf, no Here-Docs (uses pure shell builtin echo block)
+#   2. Separated trap cleanup for temporary files
+#   3. Deduplicated /proc + ps process lookup (Zero external tool dependency)
+#   4. No external formatters, no Here-Docs (uses pure shell builtin echo block)
 #   5. Size verification [ ! -s "$TMP" ] before any move (zero 0-byte risk)
-#   6. Standard plain move command (Toolbox compatible plain mv without flags)
+#   6. Standard plain move command with return-code verification
 #   7. Strict permissions (shard 0666, monthly 0660, chown 1000:1000)
-#   8. Double sync before hardware reset
+#   8. Non-stopped respawn (kill -9 only on reload) & Double sync
 # ==============================================================================
 
 export PATH=/system/xbin:/sbin:/vendor/bin:/system/sbin:/system/bin:$PATH
@@ -32,12 +32,18 @@ TMP_SHARD="$PREF_DIR/.shard_activation.tmp.$$"
 TMP_MONTHLY="$PREF_DIR/.monthly_popup.tmp.$$"
 BACKUP_DIR="/data/nemesis/backup/local.hkmc.bluelink-dismiss"
 
-# 임시 파일 자동 정리 trap
-trap 'rm -f "$TMP_SHARD" "$TMP_MONTHLY" 2>/dev/null' EXIT INT TERM
+# 임시 파일 자동 정리 및 시그널 분리 trap
+cleanup() {
+    rm -f "$TMP_SHARD" "$TMP_MONTHLY" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 
-# 4.4.2 Toolbox 호환 순수 mksh 프로세스 PID 검색 함수 (외부 도구 의존성 0%)
+# 4.4.2 Toolbox/BusyBox 호환 순수 mksh 프로세스 PID 검색 함수 (중복 출력 방지 및 컬럼 순서 대응)
 find_pids() {
     _target="$1"
+    _found=0
     for _pdir in /proc/[0-9]*; do
         [ -r "$_pdir/cmdline" ] || continue
         _cmd=""
@@ -45,20 +51,40 @@ find_pids() {
         _cmd="${_cmd%% *}"
         if [ "$_cmd" = "$_target" ]; then
             echo "${_pdir#/proc/}"
+            _found=1
         fi
     done
-    ps 2>/dev/null | while read -r _u _p _rest; do
-        case "$_rest" in
-            *"$_target")
-                echo "$_p"
+    [ "$_found" -eq 1 ] && return 0
+
+    ps 2>/dev/null | while read -r _c1 _c2 _rest; do
+        case " $_rest" in
+            *" $_target")
+                case "$_c2" in
+                    [0-9]*) echo "$_c2" ;;
+                    *)
+                        case "$_c1" in
+                            [0-9]*) echo "$_c1" ;;
+                        esac
+                        ;;
+                esac
                 ;;
         esac
     done
 }
 
+# 작성 전: SharedPreferences RAM 캐시 완전 드롭을 위해 force-stop + kill -9
 stop_telematics_processes() {
     for _p in com.hkmc.telematics.service com.hkmc.telematics.apps.Vrm.main; do
         am force-stop "$_p" 2>/dev/null
+        for _pid in $(find_pids "$_p"); do
+            [ -n "$_pid" ] && kill -9 "$_pid" 2>/dev/null
+        done
+    done
+}
+
+# 작성 후: FLAG_STOPPED 방지 및 ActivityManager 자동 리스폰 유도를 위해 kill -9만 수행
+restart_telematics_processes() {
+    for _p in com.hkmc.telematics.service com.hkmc.telematics.apps.Vrm.main; do
         for _pid in $(find_pids "$_p"); do
             [ -n "$_pid" ] && kill -9 "$_pid" 2>/dev/null
         done
@@ -124,9 +150,18 @@ chmod 660 "$TMP_MONTHLY" 2>/dev/null
 echo "[*] Terminating telematics and VRM services to prevent memory cache rollback..."
 stop_telematics_processes
 
-# 7. [Toolbox 호환 원자적 교체] 옵션 없는 순수 mv로 원자적(atomic rename) 교체
-mv "$TMP_SHARD" "$SHARD_XML" 2>/dev/null
-mv "$TMP_MONTHLY" "$MONTHLY_XML" 2>/dev/null
+# 7. [Toolbox 호환 원자적 교체 및 반환값 검증]
+if ! mv "$TMP_SHARD" "$SHARD_XML" 2>/dev/null; then
+    echo "[!] Error: Failed to replace shard_service_activation_start_setting.xml"
+    rm -f "$TMP_SHARD" "$TMP_MONTHLY" 2>/dev/null
+    exit 1
+fi
+
+if ! mv "$TMP_MONTHLY" "$MONTHLY_XML" 2>/dev/null; then
+    echo "[!] Error: Failed to replace MonthlyPopupDetails.xml"
+    rm -f "$TMP_MONTHLY" 2>/dev/null
+    exit 1
+fi
 
 chown 1000:1000 "$SHARD_XML" 2>/dev/null || chown system:system "$SHARD_XML" 2>/dev/null
 chmod 666 "$SHARD_XML" 2>/dev/null
@@ -137,8 +172,8 @@ chmod 660 "$MONTHLY_XML" 2>/dev/null
 restorecon "$SHARD_XML" 2>/dev/null || true
 restorecon "$MONTHLY_XML" 2>/dev/null || true
 
-# 8. 프로세스 재기동 유도 (ActivityManager에 의해 새 XML 로드)
-stop_telematics_processes
+# 8. 프로세스 자동 리스폰 유도 (am force-stop 없이 kill -9만 수행하여 새 XML 로드 유도)
+restart_telematics_processes
 
 # 9. 디스크 버퍼 강제 플러시
 sync

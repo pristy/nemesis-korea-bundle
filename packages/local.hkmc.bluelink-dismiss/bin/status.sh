@@ -25,9 +25,10 @@ file_contains() {
     return 1
 }
 
-# 순수 mksh 프로세스 PID 검색 함수 (외부 도구 의존성 0%)
+# 4.4.2 Toolbox/BusyBox 호환 순수 mksh 프로세스 PID 검색 함수 (중복 출력 방지 및 컬럼 순서 대응)
 find_pids() {
     _target="$1"
+    _found=0
     for _pdir in /proc/[0-9]*; do
         [ -r "$_pdir/cmdline" ] || continue
         _cmd=""
@@ -35,12 +36,22 @@ find_pids() {
         _cmd="${_cmd%% *}"
         if [ "$_cmd" = "$_target" ]; then
             echo "${_pdir#/proc/}"
+            _found=1
         fi
     done
-    ps 2>/dev/null | while read -r _u _p _rest; do
-        case "$_rest" in
-            *"$_target")
-                echo "$_p"
+    [ "$_found" -eq 1 ] && return 0
+
+    ps 2>/dev/null | while read -r _c1 _c2 _rest; do
+        case " $_rest" in
+            *" $_target")
+                case "$_c2" in
+                    [0-9]*) echo "$_c2" ;;
+                    *)
+                        case "$_c1" in
+                            [0-9]*) echo "$_c1" ;;
+                        esac
+                        ;;
+                esac
                 ;;
         esac
     done
@@ -81,9 +92,9 @@ else
     echo "[-] Stock Backup  : None"
 fi
 
-# 4. 상주 프로세스 상태 (find_pids 사용)
-PID_SVC=$(find_pids "com.hkmc.telematics.service")
-PID_VRM=$(find_pids "com.hkmc.telematics.apps.Vrm.main")
+# 4. 상주 프로세스 상태 (find_pids 사용, 공백 구분 단일 라인 포맷)
+PID_SVC=$(find_pids "com.hkmc.telematics.service" | tr '\n' ' ' 2>/dev/null)
+PID_VRM=$(find_pids "com.hkmc.telematics.apps.Vrm.main" | tr '\n' ' ' 2>/dev/null)
 echo "[*] HKMC_TAppService PID : ${PID_SVC:-Not running}"
 echo "[*] HKMC_TAppVRM PID     : ${PID_VRM:-Not running}"
 echo "=========================================="

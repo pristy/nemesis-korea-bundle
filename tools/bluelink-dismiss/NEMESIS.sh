@@ -4,14 +4,14 @@
 # Target: Hyundai/Kia Gen5W Standard Navigation (Android 4.4.2 KitKat / SDK 19)
 # Execution: Runs as root via NEMESIS USB autorun (cwd = USB root)
 # Hardened for Android 4.4.2 Toolbox & mksh:
-#   1. No printf, no Here-Docs (uses pure shell builtin echo block)
+#   1. No external formatters, no Here-Docs (uses pure shell builtin echo block)
 #   2. Size verification [ ! -s "$TMP" ] before any move (zero 0-byte risk)
-#   3. Standard plain move command (Toolbox compatible plain mv without flags)
+#   3. Standard plain move command with return-code verification
 #   4. In-directory temp files (.tmp.$$) inheriting SELinux context & partition
-#   5. Pure /proc + ps process lookup (Zero external tool dependency)
+#   5. Deduplicated /proc + ps process lookup (Zero external tool dependency)
 #   6. Non-telematics unit guard (skips cleanly if package absent)
 #   7. Strict permissions (shard 0666, monthly 0660, chown 1000:1000)
-#   8. Double sync before hardware reset
+#   8. Non-stopped respawn (kill -9 only on reload) & Double sync
 # ==============================================================================
 
 export PATH=/system/xbin:/sbin:/vendor/bin:/system/sbin:/system/bin:$PATH
@@ -66,9 +66,10 @@ trap 'exit 130' INT
 # USB 내 불필요한 스왑 파일 정리
 rm -f .NEMESIS.sh.swp 2>/dev/null
 
-# 4.4.2 Toolbox 호환 순수 mksh 프로세스 PID 검색 함수 (외부 도구 의존성 0%)
+# 4.4.2 Toolbox/BusyBox 호환 순수 mksh 프로세스 PID 검색 함수 (중복 출력 방지 및 컬럼 순서 대응)
 find_pids() {
     _target="$1"
+    _found=0
     for _pdir in /proc/[0-9]*; do
         [ -r "$_pdir/cmdline" ] || continue
         _cmd=""
@@ -76,20 +77,40 @@ find_pids() {
         _cmd="${_cmd%% *}"
         if [ "$_cmd" = "$_target" ]; then
             echo "${_pdir#/proc/}"
+            _found=1
         fi
     done
-    ps 2>/dev/null | while read -r _u _p _rest; do
-        case "$_rest" in
-            *"$_target")
-                echo "$_p"
+    [ "$_found" -eq 1 ] && return 0
+
+    ps 2>/dev/null | while read -r _c1 _c2 _rest; do
+        case " $_rest" in
+            *" $_target")
+                case "$_c2" in
+                    [0-9]*) echo "$_c2" ;;
+                    *)
+                        case "$_c1" in
+                            [0-9]*) echo "$_c1" ;;
+                        esac
+                        ;;
+                esac
                 ;;
         esac
     done
 }
 
+# 작성 전: SharedPreferences RAM 캐시 완전 드롭을 위해 force-stop + kill -9
 stop_telematics_processes() {
     for _p in com.hkmc.telematics.service com.hkmc.telematics.apps.Vrm.main; do
         am force-stop "$_p" 2>/dev/null
+        for _pid in $(find_pids "$_p"); do
+            [ -n "$_pid" ] && kill -9 "$_pid" 2>/dev/null
+        done
+    done
+}
+
+# 작성 후: FLAG_STOPPED 방지 및 ActivityManager 자동 리스폰 유도를 위해 kill -9만 수행
+restart_telematics_processes() {
+    for _p in com.hkmc.telematics.service com.hkmc.telematics.apps.Vrm.main; do
         for _pid in $(find_pids "$_p"); do
             [ -n "$_pid" ] && kill -9 "$_pid" 2>/dev/null
         done
@@ -176,9 +197,18 @@ chmod 660 "$TMP_MONTHLY" 2>/dev/null
 echo "[*] Stopping HKMC_TAppService and HKMC_TAppVRM..."
 stop_telematics_processes
 
-# 7. [Toolbox 호환 원자적 교체] 옵션 없는 순수 mv로 원자적(atomic rename) 교체
-mv "$TMP_SHARD" "$SHARD_XML" 2>/dev/null
-mv "$TMP_MONTHLY" "$MONTHLY_XML" 2>/dev/null
+# 7. [Toolbox 호환 원자적 교체 및 반환값 검증]
+if ! mv "$TMP_SHARD" "$SHARD_XML" 2>/dev/null; then
+    echo "[!] Error: Failed to replace shard_service_activation_start_setting.xml"
+    rm -f "$TMP_SHARD" "$TMP_MONTHLY" 2>/dev/null
+    exit 1
+fi
+
+if ! mv "$TMP_MONTHLY" "$MONTHLY_XML" 2>/dev/null; then
+    echo "[!] Error: Failed to replace MonthlyPopupDetails.xml"
+    rm -f "$TMP_MONTHLY" 2>/dev/null
+    exit 1
+fi
 
 # 최종 소유권/권한 및 SELinux 컨텍스트 재확인
 chown 1000:1000 "$SHARD_XML" 2>/dev/null || chown system:system "$SHARD_XML" 2>/dev/null
@@ -190,8 +220,8 @@ chmod 660 "$MONTHLY_XML" 2>/dev/null
 restorecon "$SHARD_XML" 2>/dev/null || true
 restorecon "$MONTHLY_XML" 2>/dev/null || true
 
-# 8. 프로세스 재기동 시 새 XML 파일을 메모리에 즉시 로드하도록 보장
-stop_telematics_processes
+# 8. 프로세스 자동 리스폰 유도 (am force-stop 없이 kill -9만 수행하여 새 XML 로드 유도)
+restart_telematics_processes
 
 # 9. [하드 리셋 유실 방지] 디스크 버퍼 강제 플러시 2회
 sync
