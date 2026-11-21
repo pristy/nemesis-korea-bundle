@@ -40,10 +40,14 @@ MAIN_PID=$$
     SLEEP_PID=$!
     wait "$SLEEP_PID" 2>/dev/null
 
-    pkill -9 -P "$MAIN_PID" 2>/dev/null || true
     for f in /proc/[0-9]*/stat; do
-        [ -f "$f" ] || continue
-        read -r c_pid comm state c_ppid rest < "$f" 2>/dev/null
+        [ -r "$f" ] || continue
+        _stat=""
+        IFS= read -r _stat < "$f" 2>/dev/null || continue
+        c_pid="${_stat%% *}"
+        _after="${_stat##*) }"
+        _after="${_after#* }"
+        c_ppid="${_after%% *}"
         if [ "$c_ppid" = "$MAIN_PID" ] && [ "$c_pid" != "$MY_REAL_PID" ]; then
             kill -9 "$c_pid" 2>/dev/null || true
         fi
@@ -98,10 +102,9 @@ find_pids() {
     done
 }
 
-# 작성 전: SharedPreferences RAM 캐시 완전 드롭을 위해 force-stop + kill -9
+# 작성 전: SharedPreferences RAM 캐시 완전 드롭을 위해 kill -9 수행 (FLAG_STOPPED 부작용 방지)
 stop_telematics_processes() {
     for _p in com.hkmc.telematics.service com.hkmc.telematics.apps.Vrm.main; do
-        am force-stop "$_p" 2>/dev/null
         for _pid in $(find_pids "$_p"); do
             [ -n "$_pid" ] && kill -9 "$_pid" 2>/dev/null
         done
@@ -251,9 +254,6 @@ SUCCESS_FILE="DISARM_SUCCESS.txt"
     ls -la "$USB_BACKUP_DIR" 2>/dev/null
     echo "========================================================"
 } > "$SUCCESS_FILE" 2>/dev/null
-
-sync
-sync
 
 # 11. 보조 토스트 알림 브로드캐스트 (실패해도 무시)
 am broadcast -a com.hkmc.intent.action.TOAST \

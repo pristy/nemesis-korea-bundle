@@ -72,10 +72,9 @@ find_pids() {
     done
 }
 
-# 작성 전: SharedPreferences RAM 캐시 완전 드롭을 위해 force-stop + kill -9
+# 작성 전: SharedPreferences RAM 캐시 완전 드롭을 위해 kill -9 수행 (FLAG_STOPPED 부작용 방지)
 stop_telematics_processes() {
     for _p in com.hkmc.telematics.service com.hkmc.telematics.apps.Vrm.main; do
-        am force-stop "$_p" 2>/dev/null
         for _pid in $(find_pids "$_p"); do
             [ -n "$_pid" ] && kill -9 "$_pid" 2>/dev/null
         done

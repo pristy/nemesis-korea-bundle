@@ -93,8 +93,8 @@ else
 fi
 
 # 4. 상주 프로세스 상태 (find_pids 사용, 공백 구분 단일 라인 포맷)
-PID_SVC=$(find_pids "com.hkmc.telematics.service" | tr '\n' ' ' 2>/dev/null)
-PID_VRM=$(find_pids "com.hkmc.telematics.apps.Vrm.main" | tr '\n' ' ' 2>/dev/null)
+PID_SVC=$(echo $(find_pids "com.hkmc.telematics.service"))
+PID_VRM=$(echo $(find_pids "com.hkmc.telematics.apps.Vrm.main"))
 echo "[*] HKMC_TAppService PID : ${PID_SVC:-Not running}"
 echo "[*] HKMC_TAppVRM PID     : ${PID_VRM:-Not running}"
 echo "=========================================="
